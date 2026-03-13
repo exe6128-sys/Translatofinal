@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Translate+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #e2ddd6;
+    --text-primary: #1a1814;
+    --text-secondary: #7a7570;
+    --text-muted: #b5b0a8;
+    --accent: #2d5be3;
+    --accent-light: #e8edfb;
+    --accent-glow: rgba(45, 91, 227, 0.12);
+    --green: #1a9e5a;
+    --green-bg: #e8f5ef;
+    --yellow: #c47e0a;
+    --yellow-bg: #fdf3e3;
+    --red: #d03b3b;
+    --red-bg: #fdeaea;
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.09), 0 4px 12px rgba(0,0,0,0.05);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(45,91,227,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(45,91,227,0.03) 0%, transparent 40%);
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 10;
+    padding: 20px 32px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+  }
+
+  .logo-wrap { display: flex; align-items: baseline; gap: 4px; }
+  .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-plus { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .site-desc { font-size: 12px; color: var(--text-muted); font-weight: 300; margin-left: 12px; }
+
+  .mode-toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .mode-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); transition: color 0.2s; }
+  .mode-label.active { color: var(--accent); }
+
+  .toggle-track {
+    position: relative; width: 52px; height: 28px;
+    background: var(--border); border-radius: 14px;
+    cursor: pointer; transition: background 0.3s; flex-shrink: 0;
+  }
+  .toggle-track.on { background: var(--accent); }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; background: white; border-radius: 50%;
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .toggle-track.on .toggle-thumb { transform: translateX(24px); }
+
+  .smart-badge {
+    display: none; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 500; color: var(--accent);
+    background: var(--accent-light); border: 1px solid rgba(45,91,227,0.15);
+    border-radius: 20px; padding: 5px 12px;
+  }
+  .smart-badge.visible { display: flex; }
+  .smart-badge::before { content: '✦'; font-size: 10px; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  main {
+    position: relative; z-index: 1; flex: 1;
+    padding: 20px 32px 80px; max-width: 1200px;
+    width: 100%; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .badge-row { display: flex; justify-content: center; min-height: 30px; align-items: center; }
+
+  .translator-card {
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+    overflow: hidden; animation: fadeIn 0.4s ease both;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .lang-bar { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+  .lang-side { flex: 1; display: flex; }
+  .lang-select-wrap { position: relative; flex: 1; }
+  .lang-select {
+    width: 100%; appearance: none; border: none; background: transparent;
+    font-family: 'Sora', sans-serif; font-size: 13.5px; font-weight: 500;
+    color: var(--text-primary); padding: 14px 36px 14px 20px;
+    cursor: pointer; outline: none;
+  }
+  .lang-select:hover { background: var(--surface2); }
+  .lang-select-wrap::after {
+    content: '⌄'; position: absolute; right: 14px; top: 50%;
+    transform: translateY(-52%); color: var(--text-muted); pointer-events: none;
+  }
+
+  .swap-btn {
+    flex-shrink: 0; width: 40px; height: 40px;
+    border: 1px solid var(--border); border-radius: 50%;
+    background: var(--surface); color: var(--text-secondary);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: all 0.25s; margin: 0 8px;
+  }
+  .swap-btn:hover {
+    background: var(--accent); color: white; border-color: var(--accent);
+    transform: rotate(180deg); box-shadow: 0 4px 12px var(--accent-glow);
+  }
+
+  .panels { display: grid; grid-template-columns: 1fr 1px 1fr; }
+  .divider-v { background: var(--border); align-self: stretch; }
+  .panel { display: flex; flex-direction: column; position: relative; min-height: 280px; }
+
+  .panel-textarea {
+    flex: 1; width: 100%; border: none; resize: none;
+    font-family: 'Sora', sans-serif; font-size: 15.5px; font-weight: 300;
+    line-height: 1.7; color: var(--text-primary);
+    padding: 22px 24px 14px; outline: none; background: transparent; min-height: 240px;
+  }
+  .panel-textarea::placeholder { color: var(--text-muted); }
+
+  .panel-output-text {
+    flex: 1; padding: 22px 24px 14px; font-size: 15.5px; font-weight: 300;
+    line-height: 1.7; color: var(--text-primary); min-height: 240px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .panel-output-text.placeholder { color: var(--text-muted); }
+
+  .panel-footer {
+    display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 12px;
+  }
+  .char-count { font-size: 11.5px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .char-count.limit { color: var(--red); }
+  .panel-actions { display: flex; gap: 6px; }
+
+  .icon-btn {
+    width: 32px; height: 32px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: transparent; color: var(--text-muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--text-secondary); border-color: #ccc; }
+  .icon-btn.copied { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+
+  .confidence-row { padding: 10px 24px 0; min-height: 30px; display: flex; align-items: center; }
+  .confidence-chip {
+    display: none; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 3px 10px; border-radius: 20px;
+  }
+  .confidence-chip.visible { display: flex; }
+  .confidence-chip::before { content: '●'; font-size: 8px; }
+  .confidence-chip.green { color: var(--green); background: var(--green-bg); }
+  .confidence-chip.yellow { color: var(--yellow); background: var(--yellow-bg); }
+  .confidence-chip.red { color: var(--red); background: var(--red-bg); }
+
+  .loading-overlay {
+    display: none; position: absolute; inset: 0;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(2px);
+    align-items: center; justify-content: center; z-index: 5;
+  }
+  .loading-overlay.active { display: flex; }
+  .loader { display: flex; gap: 6px; align-items: center; }
+  .loader span {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .loader span:nth-child(2) { animation-delay: 0.15s; background: rgba(45,91,227,0.6); }
+  .loader span:nth-child(3) { animation-delay: 0.3s; background: rgba(45,91,227,0.35); }
+  @keyframes bounce { 0%,80%,100%{transform:scale(0.7);opacity:0.5} 40%{transform:scale(1);opacity:1} }
+
+  .translate-btn-wrap { display: flex; justify-content: center; padding: 16px 24px; }
+  .translate-btn {
+    background: var(--accent); color: white; border: none;
+    border-radius: var(--radius-sm); padding: 12px 36px;
+    font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.02em; transition: all 0.2s;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+  .translate-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(45,91,227,0.28); }
+  .translate-btn:active { transform: translateY(0); }
+  .translate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  footer {
+    position: fixed; bottom: 12px; right: 20px;
+    font-size: 10px; color: var(--text-muted); opacity: 0.45;
+    max-width: 320px; text-align: right; line-height: 1.5;
+    z-index: 100; pointer-events: none;
+  }
+
+  @media (max-width: 720px) {
+    header { padding: 16px 16px 0; }
+    main { padding: 16px 16px 80px; }
+    .panels { grid-template-columns: 1fr; }
+    .divider-v { display: none; }
+    .panel { border-top: 1px solid var(--border); }
+    .panel:first-child { border-top: none; }
+    .site-desc { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:baseline;gap:6px;">
+    <div class="logo-wrap">
+      <span class="logo-text">Translate</span><span class="logo-plus">+</span>
+    </div>
+    <span class="site-desc">Improved translation tool.</span>
+  </div>
+  <div class="mode-toggle-wrap">
+    <span class="mode-label active" id="label-translate">Translate</span>
+    <div class="toggle-track" id="modeToggle" onclick="toggleMode()">
+      <div class="toggle-thumb"></div>
+    </div>
+    <span class="mode-label" id="label-plus">Translate+</span>
+  </div>
+</header>
+
+<main>
+  <div class="badge-row">
+    <div class="smart-badge" id="smartBadge">Smart translation mode — translations are intelligent multilingual responses.</div>
+  </div>
+
+  <div class="translator-card">
+    <div class="lang-bar">
+      <div class="lang-side">
+        <div class="lang-select-wrap">
+          <select class="lang-select" id="sourceLang">
+            <option value="English">English</option>
+            <option value="Turkish">Turkish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Spanish">Spanish</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Chinese">Chinese</option>
+            <option value="Italian">Italian</option>
+            <option value="Korean">Korean</option>
+            <option value="Arabic">Arabic</option>
+            <option value="Russian">Russian</option>
+          </select>
+        </div>
+      </div>
+      <button class="swap-btn" onclick="swapLanguages()" title="Swap languages">⇄</button>
+      <div class="lang-side">
+        <div class="lang-select-wrap">
+          <select class="lang-select" id="targetLang">
+            <option value="English">English</option>
+            <option value="Turkish" selected>Turkish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Spanish">Spanish</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Chinese">Chinese</option>
+            <option value="Italian">Italian</option>
+            <option value="Korean">Korean</option>
+            <option value="Arabic">Arabic</option>
+            <option value="Russian">Russian</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <textarea
+          class="panel-textarea" id="inputText"
+          placeholder="Enter text…" maxlength="3000"
+          oninput="onInputChange()" onkeydown="handleKey(event)"
+        ></textarea>
+        <div class="panel-footer">
+          <span class="char-count" id="charCount">0 / 3000</span>
+          <div class="panel-actions">
+            <button class="icon-btn" onclick="clearInput()" title="Clear">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider-v"></div>
+
+      <div class="panel">
+        <div class="confidence-row">
+          <div class="confidence-chip" id="confidenceChip"></div>
+        </div>
+        <div class="panel-output-text placeholder" id="outputText">Translation will appear here…</div>
+        <div class="panel-footer">
+          <span style="font-size:11.5px;color:var(--text-muted);font-family:'DM Mono',monospace;" id="outputMeta"></span>
+          <div class="panel-actions">
+            <button class="icon-btn" id="copyBtn" onclick="copyOutput()" title="Copy">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="loading-overlay" id="loadingOverlay">
+          <div class="loader"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="translate-btn-wrap">
+      <button class="translate-btn" id="translateBtn" onclick="doTranslate()">
+        <span id="btnLabel">Translate</span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<footer>For education purposes only. This tool may produce uncertain results. The creators assume no responsibility for decisions made based on its output.</footer>
+
+<script>
+  let isSmartMode = false;
+  let isLoading = false;
+
+  function toggleMode() {
+    isSmartMode = !isSmartMode;
+    document.getElementById('modeToggle').classList.toggle('on', isSmartMode);
+    document.getElementById('smartBadge').classList.toggle('visible', isSmartMode);
+    document.getElementById('btnLabel').textContent = isSmartMode ? 'Ask Translate+' : 'Translate';
+    document.getElementById('label-translate').classList.toggle('active', !isSmartMode);
+    document.getElementById('label-plus').classList.toggle('active', isSmartMode);
+    document.getElementById('inputText').placeholder = isSmartMode ? 'Ask a question or enter any text…' : 'Enter text…';
+    resetOutput();
+  }
+
+  function onInputChange() {
+    const val = document.getElementById('inputText').value;
+    const cc = document.getElementById('charCount');
+    cc.textContent = `${val.length} / 3000`;
+    cc.classList.toggle('limit', val.length > 2800);
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doTranslate();
+  }
+
+  function clearInput() {
+    document.getElementById('inputText').value = '';
+    onInputChange();
+    resetOutput();
+  }
+
+  function resetOutput() {
+    const el = document.getElementById('outputText');
+    el.textContent = 'Translation will appear here…';
+    el.className = 'panel-output-text placeholder';
+    document.getElementById('outputMeta').textContent = '';
+    hideConfidence();
+  }
+
+  function swapLanguages() {
+    const sl = document.getElementById('sourceLang');
+    const tl = document.getElementById('targetLang');
+    const tmp = sl.value; sl.value = tl.value; tl.value = tmp;
+    const outputEl = document.getElementById('outputText');
+    if (!outputEl.classList.contains('placeholder')) {
+      document.getElementById('inputText').value = outputEl.textContent;
+      onInputChange();
+      resetOutput();
+    }
+  }
+
+  async function copyOutput() {
+    const el = document.getElementById('outputText');
+    if (el.classList.contains('placeholder')) return;
+    try {
+      await navigator.clipboard.writeText(el.textContent);
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+      }, 2000);
+    } catch(e) {}
+  }
+
+  function showConfidence(level) {
+    const chip = document.getElementById('confidenceChip');
+    chip.className = 'confidence-chip';
+    if (!level || level === 'none') return;
+    chip.classList.add('visible', level);
+    const labels = { green: 'Low uncertainty', yellow: 'Moderate uncertainty', red: 'High uncertainty' };
+    chip.textContent = labels[level] || '';
+  }
+
+  function hideConfidence() {
+    document.getElementById('confidenceChip').className = 'confidence-chip';
+  }
+
+  function setLoading(v) {
+    isLoading = v;
+    document.getElementById('loadingOverlay').classList.toggle('active', v);
+    document.getElementById('translateBtn').disabled = v;
+  }
+
+  // ─── CONFIG ──────────────────────────────────────────────────────────────────
+  // Set to false and provide a /api/translate backend to use real AI
+  const USE_DEMO_MODE = true;
+  const API_ENDPOINT  = '/api/translate'; // backend route for future real integration
+
+  // ─── ENTRY POINT ─────────────────────────────────────────────────────────────
+  async function doTranslate() {
+    if (isLoading) return;
+    const inputText = document.getElementById('inputText').value.trim();
+    if (!inputText) return;
+
+    const sourceLang = document.getElementById('sourceLang').value;
+    const targetLang = document.getElementById('targetLang').value;
+
+    setLoading(true);
+    hideConfidence();
+
+    const outputEl = document.getElementById('outputText');
+    outputEl.textContent = '';
+    outputEl.className = 'panel-output-text';
+
+    try {
+      const result = USE_DEMO_MODE
+        ? await demoHandler(inputText, sourceLang, targetLang, isSmartMode)
+        : await apiHandler(inputText, sourceLang, targetLang, isSmartMode);
+
+      outputEl.textContent = result.text;
+      outputEl.className = 'panel-output-text';
+      showConfidence(result.confidence && result.confidence !== 'none' ? result.confidence : null);
+      document.getElementById('outputMeta').textContent = targetLang;
+
+    } catch(err) {
+      outputEl.textContent = 'Something went wrong. Please try again.';
+      outputEl.className = 'panel-output-text';
+      showConfidence('red');
+    }
+
+    setLoading(false);
+  }
+
+  // ─── REAL API HANDLER (future backend) ───────────────────────────────────────
+  // When USE_DEMO_MODE = false, requests go to your own server — never directly
+  // to Anthropic/OpenAI from the browser. The server holds the API key securely.
+  async function apiHandler(text, sourceLang, targetLang, smartMode) {
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, sourceLang, targetLang, smartMode })
+    });
+    if (!response.ok) throw new Error(`Server error ${response.status}`);
+    const data = await response.json();
+    return { text: data.result, confidence: data.confidence || 'none' };
+  }
+
+  // ─── DEMO / FALLBACK HANDLER ─────────────────────────────────────────────────
+  async function demoHandler(text, sourceLang, targetLang, smartMode) {
+    // Simulate slight network delay for realism
+    await new Promise(r => setTimeout(r, 420 + Math.random() * 300));
+
+    if (smartMode) return demoSmart(text, targetLang);
+    return demoTranslate(text, sourceLang, targetLang);
+  }
+
+  // ── DEMO TRANSLATE MODE ──────────────────────────────────────────────────────
+  const PHRASE_MAP = {
+    'hello':       { Turkish:'Merhaba', French:'Bonjour', German:'Hallo', Spanish:'Hola', Japanese:'こんにちは', Chinese:'你好', Italian:'Ciao', Korean:'안녕하세요', Arabic:'مرحبا', Russian:'Привет', English:'Hello' },
+    'goodbye':     { Turkish:'Hoşça kal', French:'Au revoir', German:'Auf Wiedersehen', Spanish:'Adiós', Japanese:'さようなら', Chinese:'再见', Italian:'Arrivederci', Korean:'안녕히 가세요', Arabic:'وداعاً', Russian:'До свидания', English:'Goodbye' },
+    'thank you':   { Turkish:'Teşekkür ederim', French:'Merci', German:'Danke', Spanish:'Gracias', Japanese:'ありがとう', Chinese:'谢谢', Italian:'Grazie', Korean:'감사합니다', Arabic:'شكراً', Russian:'Спасибо', English:'Thank you' },
+    'yes':         { Turkish:'Evet', French:'Oui', German:'Ja', Spanish:'Sí', Japanese:'はい', Chinese:'是', Italian:'Sì', Korean:'예', Arabic:'نعم', Russian:'Да', English:'Yes' },
+    'no':          { Turkish:'Hayır', French:'Non', German:'Nein', Spanish:'No', Japanese:'いいえ', Chinese:'不', Italian:'No', Korean:'아니요', Arabic:'لا', Russian:'Нет', English:'No' },
+    'how are you': { Turkish:'Nasılsın?', French:'Comment ça va?', German:'Wie geht es dir?', Spanish:'¿Cómo estás?', Japanese:'お元気ですか？', Chinese:'你好吗？', Italian:'Come stai?', Korean:'어떻게 지내세요?', Arabic:'كيف حالك؟', Russian:'Как дела?', English:'How are you?' },
+    'good morning':{ Turkish:'Günaydın', French:'Bonjour', German:'Guten Morgen', Spanish:'Buenos días', Japanese:'おはようございます', Chinese:'早上好', Italian:'Buongiorno', Korean:'좋은 아침이에요', Arabic:'صباح الخير', Russian:'Доброе утро', English:'Good morning' },
+    'good night':  { Turkish:'İyi geceler', French:'Bonne nuit', German:'Gute Nacht', Spanish:'Buenas noches', Japanese:'おやすみなさい', Chinese:'晚安', Italian:'Buonanotte', Korean:'잘 자요', Arabic:'تصبح على خير', Russian:'Спокойной ночи', English:'Good night' },
+    'please':      { Turkish:'Lütfen', French:'S\'il vous plaît', German:'Bitte', Spanish:'Por favor', Japanese:'お願いします', Chinese:'请', Italian:'Per favore', Korean:'제발', Arabic:'من فضلك', Russian:'Пожалуйста', English:'Please' },
+    'sorry':       { Turkish:'Özür dilerim', French:'Désolé', German:'Entschuldigung', Spanish:'Lo siento', Japanese:'すみません', Chinese:'对不起', Italian:'Mi dispiace', Korean:'죄송합니다', Arabic:'آسف', Russian:'Извините', English:'Sorry' },
+    'where is':    { Turkish:'Nerede?', French:'Où est?', German:'Wo ist?', Spanish:'¿Dónde está?', Japanese:'どこですか？', Chinese:'在哪里？', Italian:'Dov\'è?', Korean:'어디에 있어요?', Arabic:'أين يوجد؟', Russian:'Где находится?', English:'Where is?' },
+    'i love you':  { Turkish:'Seni seviyorum', French:'Je t\'aime', German:'Ich liebe dich', Spanish:'Te amo', Japanese:'愛してる', Chinese:'我爱你', Italian:'Ti amo', Korean:'사랑해요', Arabic:'أحبك', Russian:'Я тебя люблю', English:'I love you' },
+  };
+
+  // Fallback placeholder messages per language when phrase isn't in map
+  const DEMO_PLACEHOLDER = {
+    Turkish:  '[Demo modu: Gerçek çeviri için backend API gereklidir.]',
+    French:   '[Mode démo : Une API backend est requise pour une vraie traduction.]',
+    German:   '[Demo-Modus: Für echte Übersetzungen ist ein Backend-API erforderlich.]',
+    Spanish:  '[Modo demo: Se requiere una API backend para traducción real.]',
+    Japanese: '[デモモード：実際の翻訳にはバックエンドAPIが必要です。]',
+    Chinese:  '[演示模式：实际翻译需要后端API。]',
+    Italian:  '[Modalità demo: Per una traduzione reale è necessaria un\'API backend.]',
+    Korean:   '[데모 모드: 실제 번역을 위해 백엔드 API가 필요합니다.]',
+    Arabic:   '[وضع العرض التوضيحي: مطلوب واجهة برمجة خلفية للترجمة الحقيقية.]',
+    Russian:  '[Демо-режим: для реального перевода требуется серверный API.]',
+    English:  '[Demo mode: A backend API is required for real translation.]',
+  };
+
+  function demoTranslate(text, sourceLang, targetLang) {
+    const key = text.trim().toLowerCase().replace(/[?!.,]+$/, '');
+    const match = PHRASE_MAP[key];
+    if (match && match[targetLang]) {
+      return { text: match[targetLang], confidence: 'none' };
+    }
+    // Partial match
+    for (const [phrase, translations] of Object.entries(PHRASE_MAP)) {
+      if (key.includes(phrase) && translations[targetLang]) {
+        return { text: translations[targetLang], confidence: 'green' };
+      }
+    }
+    const placeholder = DEMO_PLACEHOLDER[targetLang] || DEMO_PLACEHOLDER['English'];
+    return { text: placeholder, confidence: 'yellow' };
+  }
+
+  // ── DEMO SMART MODE ──────────────────────────────────────────────────────────
+  function demoSmart(text, targetLang) {
+    const t = text.trim().toLowerCase();
+
+    // Multiple choice detection  A) / A. / option A
+    const mcMatch = t.match(/\b([a-d])[).\s]/i) || t.match(/option\s+([a-d])\b/i) || t.match(/choose\s+([a-d])\b/i);
+    if (mcMatch) {
+      return { text: mcMatch[1].toUpperCase(), confidence: 'green' };
+    }
+
+    // Math detection
+    const mathResult = tryMath(t);
+    if (mathResult !== null) {
+      const label = demoInLang('Answer', targetLang);
+      return { text: `${label}: ${mathResult}`, confidence: 'none' };
+    }
+
+    // Greeting
+    if (/^(hi|hello|hey|howdy|greetings|salut|hola|ciao|merhaba|привет|こんにちは|你好|안녕)/.test(t)) {
+      return { text: demoInLang('greeting', targetLang), confidence: 'none' };
+    }
+
+    // Capital city questions
+    const capMatch = t.match(/capital\s+(?:of\s+)?([a-z\s]+)/i) || t.match(/([a-z\s]+)\s+capital/i);
+    if (capMatch) {
+      const country = capMatch[1].trim().toLowerCase();
+      const capitals = { france:'Paris', germany:'Berlin', spain:'Madrid', italy:'Rome', japan:'Tokyo', china:'Beijing', russia:'Moscow', turkey:'Ankara', korea:'Seoul', 'south korea':'Seoul', brazil:'Brasília', argentina:'Buenos Aires', 'united states':'Washington D.C.', usa:'Washington D.C.', uk:'London', 'united kingdom':'London', australia:'Canberra', canada:'Ottawa', mexico:'Mexico City', india:'New Delhi', egypt:'Cairo', 'saudi arabia':'Riyadh' };
+      const cap = capitals[country];
+      if (cap) return { text: cap, confidence: 'none' };
+    }
+
+    // What is / who is / define
+    if (/^(what is|what's|who is|who's|define|explain)\s+/i.test(t)) {
+      return { text: demoInLang('smart_what', targetLang), confidence: 'yellow' };
+    }
+
+    // Yes/no questions
+    if (/^(is|are|was|were|do|does|did|can|could|will|would|should|has|have)\s/i.test(t)) {
+      return { text: demoInLang('smart_yesno', targetLang), confidence: 'yellow' };
+    }
+
+    // Current events / news
+    if (/\b(news|today|current|latest|recently|now|2024|2025|2026)\b/.test(t)) {
+      return { text: demoInLang('smart_news', targetLang), confidence: 'red' };
+    }
+
+    // Default smart response
+    return { text: demoInLang('smart_default', targetLang), confidence: 'yellow' };
+  }
+
+  // Basic math evaluator (handles +, -, *, /, ^, simple expressions)
+  function tryMath(text) {
+    // Extract a math expression
+    const expr = text
+      .replace(/what\s+is|calculate|compute|solve|=\?|equals?/gi, '')
+      .replace(/\^/g, '**')
+      .replace(/[a-df-wyz]/gi, '') // remove letters except 'e' (euler's number)
+      .trim();
+    if (!expr || !/[\d]/.test(expr)) return null;
+    try {
+      // Safe eval: only allow digits, operators, parens, dots, spaces
+      if (/^[\d\s\+\-\*\/\(\)\.\%\*e]+$/.test(expr)) {
+        const result = Function('"use strict"; return (' + expr + ')')();
+        if (typeof result === 'number' && isFinite(result)) {
+          return Number.isInteger(result) ? result : parseFloat(result.toFixed(6));
+        }
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  // Short localized demo strings
+  function demoInLang(key, lang) {
+    const responses = {
+      greeting: {
+        English:'Hello! How can I help you today?', Turkish:'Merhaba! Bugün size nasıl yardımcı olabilirim?', French:'Bonjour! Comment puis-je vous aider?', German:'Hallo! Wie kann ich Ihnen helfen?', Spanish:'¡Hola! ¿Cómo puedo ayudarte?', Japanese:'こんにちは！今日はどのようにお手伝いできますか？', Chinese:'你好！今天我能帮助你什么？', Italian:'Ciao! Come posso aiutarti oggi?', Korean:'안녕하세요! 오늘 어떻게 도와드릴까요?', Arabic:'مرحباً! كيف يمكنني مساعدتك اليوم؟', Russian:'Привет! Чем могу помочь?'
+      },
+      Answer: {
+        English:'Answer', Turkish:'Cevap', French:'Réponse', German:'Antwort', Spanish:'Respuesta', Japanese:'答え', Chinese:'答案', Italian:'Risposta', Korean:'답', Arabic:'الجواب', Russian:'Ответ'
+      },
+      smart_what: {
+        English:'[Demo mode] This is a smart response placeholder. Connect a backend API for real answers.', Turkish:'[Demo modu] Bu akıllı bir yanıt yer tutucusudur. Gerçek yanıtlar için bir backend API bağlayın.', French:'[Mode démo] Réponse de démonstration. Connectez une API backend pour de vraies réponses.', German:'[Demo-Modus] Demo-Antwort. Verbinden Sie eine Backend-API für echte Antworten.', Spanish:'[Modo demo] Respuesta de demostración. Conecte una API backend para respuestas reales.', Japanese:'[デモモード] これはデモ応答です。実際の回答にはバックエンドAPIを接続してください。', Chinese:'[演示模式] 这是演示响应。请连接后端API以获得真实答案。', Italian:'[Modalità demo] Risposta dimostrativa. Collega un\'API backend per risposte reali.', Korean:'[데모 모드] 데모 응답입니다. 실제 답변을 위해 백엔드 API를 연결하세요.', Arabic:'[وضع العرض] هذه استجابة تجريبية. قم بتوصيل API خلفي للحصول على إجابات حقيقية.', Russian:'[Демо-режим] Это демонстрационный ответ. Подключите API для реальных ответов.'
+      },
+      smart_yesno: {
+        English:'[Demo mode] Yes/no answer unavailable without backend API.', Turkish:'[Demo modu] Evet/hayır yanıtı backend API olmadan mevcut değil.', French:'[Mode démo] Réponse oui/non indisponible sans API backend.', German:'[Demo-Modus] Ja/Nein-Antwort ohne Backend-API nicht verfügbar.', Spanish:'[Modo demo] Respuesta sí/no no disponible sin API backend.', Japanese:'[デモ] バックエンドAPIなしでは回答できません。', Chinese:'[演示] 没有后端API，无法提供是/否答案。', Italian:'[Demo] Risposta sì/no non disponibile senza API backend.', Korean:'[데모] 백엔드 API 없이는 예/아니오 답변을 제공할 수 없습니다.', Arabic:'[عرض] لا تتوفر إجابة نعم/لا بدون API خلفي.', Russian:'[Демо] Ответ да/нет недоступен без API.'
+      },
+      smart_news: {
+        English:'[Demo mode] Current events require a live API connection.', Turkish:'[Demo modu] Güncel olaylar için canlı API bağlantısı gereklidir.', French:'[Mode démo] Les événements actuels nécessitent une connexion API en direct.', German:'[Demo-Modus] Aktuelle Ereignisse erfordern eine Live-API-Verbindung.', Spanish:'[Modo demo] Los eventos actuales requieren una conexión API en vivo.', Japanese:'[デモ] 最新情報にはライブAPI接続が必要です。', Chinese:'[演示] 当前事件需要实时API连接。', Italian:'[Demo] Gli eventi attuali richiedono una connessione API live.', Korean:'[데모] 최신 이벤트에는 실시간 API 연결이 필요합니다.', Arabic:'[عرض] الأحداث الجارية تتطلب اتصالاً مباشراً بـ API.', Russian:'[Демо] Текущие события требуют подключения к API.'
+      },
+      smart_default: {
+        English:'[Demo mode] Connect a backend API at /api/translate for real intelligent responses.', Turkish:'[Demo modu] Gerçek akıllı yanıtlar için /api/translate adresine bir backend API bağlayın.', French:'[Mode démo] Connectez une API backend à /api/translate pour de vraies réponses intelligentes.', German:'[Demo-Modus] Verbinden Sie eine Backend-API mit /api/translate für echte intelligente Antworten.', Spanish:'[Modo demo] Conecte una API backend en /api/translate para respuestas inteligentes reales.', Japanese:'[デモモード] 実際のスマート応答には /api/translate にバックエンドAPIを接続してください。', Chinese:'[演示模式] 请在 /api/translate 连接后端API以获得真实智能响应。', Italian:'[Modalità demo] Collega un\'API backend a /api/translate per risposte intelligenti reali.', Korean:'[데모 모드] 실제 스마트 응답을 위해 /api/translate에 백엔드 API를 연결하세요.', Arabic:'[وضع العرض] قم بتوصيل API خلفي على /api/translate للحصول على استجابات ذكية حقيقية.', Russian:'[Демо-режим] Подключите API к /api/translate для реальных интеллектуальных ответов.'
+      }
+    };
+    const group = responses[key] || {};
+    return group[lang] || group['English'] || '[Demo mode]';
+  }
+</script>
+</body>
+</html>
