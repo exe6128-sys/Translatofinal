@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Translate+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #e2ddd6;
+    --text-primary: #1a1814;
+    --text-secondary: #7a7570;
+    --text-muted: #b5b0a8;
+    --accent: #2d5be3;
+    --accent-light: #e8edfb;
+    --accent-glow: rgba(45, 91, 227, 0.12);
+    --green: #1a9e5a;
+    --green-bg: #e8f5ef;
+    --yellow: #c47e0a;
+    --yellow-bg: #fdf3e3;
+    --red: #d03b3b;
+    --red-bg: #fdeaea;
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.09), 0 4px 12px rgba(0,0,0,0.05);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(45,91,227,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(45,91,227,0.03) 0%, transparent 40%);
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 10;
+    padding: 20px 32px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+  }
+
+  .logo-wrap { display: flex; align-items: baseline; gap: 4px; }
+  .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-plus { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .site-desc { font-size: 12px; color: var(--text-muted); font-weight: 300; margin-left: 12px; }
+
+  .mode-toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .mode-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); transition: color 0.2s; }
+  .mode-label.active { color: var(--accent); }
+
+  .toggle-track {
+    position: relative; width: 52px; height: 28px;
+    background: var(--border); border-radius: 14px;
+    cursor: pointer; transition: background 0.3s; flex-shrink: 0;
+  }
+  .toggle-track.on { background: var(--accent); }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; background: white; border-radius: 50%;
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .toggle-track.on .toggle-thumb { transform: translateX(24px); }
+
+  .smart-badge {
+    display: none; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 500; color: var(--accent);
+    background: var(--accent-light); border: 1px solid rgba(45,91,227,0.15);
+    border-radius: 20px; padding: 5px 12px;
+  }
+  .smart-badge.visible { display: flex; }
+  .smart-badge::before { content: '✦'; font-size: 10px; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  main {
+    position: relative; z-index: 1; flex: 1;
+    padding: 20px 32px 80px; max-width: 1200px;
+    width: 100%; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .badge-row { display: flex; justify-content: center; min-height: 30px; align-items: center; }
+
+  .translator-card {
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+    overflow: hidden; animation: fadeIn 0.4s ease both;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .lang-bar { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+  .lang-side { flex: 1; display: flex; }
+  .lang-select-wrap { position: relative; flex: 1; }
+  .lang-select {
+    width: 100%; appearance: none; border: none; background: transparent;
+    font-family: 'Sora', sans-serif; font-size: 13.5px; font-weight: 500;
+    color: var(--text-primary); padding: 14px 36px 14px 20px;
+    cursor: pointer; outline: none;
+  }
+  .lang-select:hover { background: var(--surface2); }
+  .lang-select-wrap::after {
+    content: '⌄'; position: absolute; right: 14px; top: 50%;
+    transform: translateY(-52%); color: var(--text-muted); pointer-events: none;
+  }
+
+  .swap-btn {
+    flex-shrink: 0; width: 40px; height: 40px;
+    border: 1px solid var(--border); border-radius: 50%;
+    background: var(--surface); color: var(--text-secondary);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: all 0.25s; margin: 0 8px;
+  }
+  .swap-btn:hover {
+    background: var(--accent); color: white; border-color: var(--accent);
+    transform: rotate(180deg); box-shadow: 0 4px 12px var(--accent-glow);
+  }
+
+  .panels { display: grid; grid-template-columns: 1fr 1px 1fr; }
+  .divider-v { background: var(--border); align-self: stretch; }
+  .panel { display: flex; flex-direction: column; position: relative; min-height: 280px; }
+
+  .panel-textarea {
+    flex: 1; width: 100%; border: none; resize: none;
+    font-family: 'Sora', sans-serif; font-size: 15.5px; font-weight: 300;
+    line-height: 1.7; color: var(--text-primary);
+    padding: 22px 24px 14px; outline: none; background: transparent; min-height: 240px;
+  }
+  .panel-textarea::placeholder { color: var(--text-muted); }
+
+  .panel-output-text {
+    flex: 1; padding: 22px 24px 14px; font-size: 15.5px; font-weight: 300;
+    line-height: 1.7; color: var(--text-primary); min-height: 240px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .panel-output-text.placeholder { color: var(--text-muted); }
+
+  .panel-footer {
+    display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 12px;
+  }
+  .char-count { font-size: 11.5px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .char-count.limit { color: var(--red); }
+  .panel-actions { display: flex; gap: 6px; }
+
+  .icon-btn {
+    width: 32px; height: 32px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: transparent; color: var(--text-muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--text-secondary); border-color: #ccc; }
+  .icon-btn.copied { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+
+  .confidence-row { padding: 10px 24px 0; min-height: 30px; display: flex; align-items: center; }
+  .confidence-chip {
+    display: none; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 3px 10px; border-radius: 20px;
+  }
+  .confidence-chip.visible { display: flex; }
+  .confidence-chip::before { content: '●'; font-size: 8px; }
+  .confidence-chip.green { color: var(--green); background: var(--green-bg); }
+  .confidence-chip.yellow { color: var(--yellow); background: var(--yellow-bg); }
+  .confidence-chip.red { color: var(--red); background: var(--red-bg); }
+
+  .loading-overlay {
+    display: none; position: absolute; inset: 0;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(2px);
+    align-items: center; justify-content: center; z-index: 5;
+  }
+  .loading-overlay.active { display: flex; }
+  .loader { display: flex; gap: 6px; align-items: center; }
+  .loader span {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .loader span:nth-child(2) { animation-delay: 0.15s; background: rgba(45,91,227,0.6); }
+  .loader span:nth-child(3) { animation-delay: 0.3s; background: rgba(45,91,227,0.35); }
+  @keyframes bounce { 0%,80%,100%{transform:scale(0.7);opacity:0.5} 40%{transform:scale(1);opacity:1} }
+
+  .translate-btn-wrap { display: flex; justify-content: center; padding: 16px 24px; }
+  .translate-btn {
+    background: var(--accent); color: white; border: none;
+    border-radius: var(--radius-sm); padding: 12px 36px;
+    font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.02em; transition: all 0.2s;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+  .translate-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(45,91,227,0.28); }
+  .translate-btn:active { transform: translateY(0); }
+  .translate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  footer {
+    position: fixed; bottom: 12px; right: 20px;
+    font-size: 10px; color: var(--text-muted); opacity: 0.45;
+    max-width: 320px; text-align: right; line-height: 1.5;
+    z-index: 100; pointer-events: none;
+  }
+
+  @media (max-width: 720px) {
+    header { padding: 16px 16px 0; }
+    main { padding: 16px 16px 80px; }
+    .panels { grid-template-columns: 1fr; }
+    .divider-v { display: none; }
+    .panel { border-top: 1px solid var(--border); }
+    .panel:first-child { border-top: none; }
+    .site-desc { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:baseline;gap:6px;">
+    <div class="logo-wrap">
+      <span class="logo-text">Translate</span><span class="logo-plus">+</span>
+    </div>
+    <span class="site-desc">Improved translation tool.</span>
+  </div>
+  <div class="mode-toggle-wrap">
+    <span class="mode-label active" id="label-translate">Translate</span>
+    <div class="toggle-track" id="modeToggle" onclick="toggleMode()">
+      <div class="toggle-thumb"></div>
+    </div>
+    <span class="mode-label" id="label-plus">Translate+</span>
+  </div>
+</header>
+
+<main>
+  <div class="badge-row">
+    <div class="smart-badge" id="smartBadge">Smart translation mode — translations are intelligent multilingual responses.</div>
+  </div>
+
+  <div class="translator-card">
+    <div class="lang-bar">
+      <div class="lang-side">
+        <div class="lang-select-wrap">
+          <select class="lang-select" id="sourceLang">
+            <option value="English">English</option>
+            <option value="Turkish">Turkish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Spanish">Spanish</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Chinese">Chinese</option>
+            <option value="Italian">Italian</option>
+            <option value="Korean">Korean</option>
+            <option value="Arabic">Arabic</option>
+            <option value="Russian">Russian</option>
+          </select>
+        </div>
+      </div>
+      <button class="swap-btn" onclick="swapLanguages()" title="Swap languages">⇄</button>
+      <div class="lang-side">
+        <div class="lang-select-wrap">
+          <select class="lang-select" id="targetLang">
+            <option value="English">English</option>
+            <option value="Turkish" selected>Turkish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Spanish">Spanish</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Chinese">Chinese</option>
+            <option value="Italian">Italian</option>
+            <option value="Korean">Korean</option>
+            <option value="Arabic">Arabic</option>
+            <option value="Russian">Russian</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <textarea
+          class="panel-textarea" id="inputText"
+          placeholder="Enter text…" maxlength="3000"
+          oninput="onInputChange()" onkeydown="handleKey(event)"
+        ></textarea>
+        <div class="panel-footer">
+          <span class="char-count" id="charCount">0 / 3000</span>
+          <div class="panel-actions">
+            <button class="icon-btn" onclick="clearInput()" title="Clear">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider-v"></div>
+
+      <div class="panel">
+        <div class="confidence-row">
+          <div class="confidence-chip" id="confidenceChip"></div>
+        </div>
+        <div class="panel-output-text placeholder" id="outputText">Translation will appear here…</div>
+        <div class="panel-footer">
+          <span style="font-size:11.5px;color:var(--text-muted);font-family:'DM Mono',monospace;" id="outputMeta"></span>
+          <div class="panel-actions">
+            <button class="icon-btn" id="copyBtn" onclick="copyOutput()" title="Copy">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="loading-overlay" id="loadingOverlay">
+          <div class="loader"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="translate-btn-wrap">
+      <button class="translate-btn" id="translateBtn" onclick="doTranslate()">
+        <span id="btnLabel">Translate</span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<footer>For education purposes only. This tool may produce uncertain results. The creators assume no responsibility for decisions made based on its output.</footer>
+
+<script>
+  let isSmartMode = false;
+  let isLoading = false;
+
+  function toggleMode() {
+    isSmartMode = !isSmartMode;
+    document.getElementById('modeToggle').classList.toggle('on', isSmartMode);
+    document.getElementById('smartBadge').classList.toggle('visible', isSmartMode);
+    document.getElementById('btnLabel').textContent = isSmartMode ? 'Ask Translate+' : 'Translate';
+    document.getElementById('label-translate').classList.toggle('active', !isSmartMode);
+    document.getElementById('label-plus').classList.toggle('active', isSmartMode);
+    document.getElementById('inputText').placeholder = isSmartMode ? 'Ask a question or enter any text…' : 'Enter text…';
+    resetOutput();
+  }
+
+  function onInputChange() {
+    const val = document.getElementById('inputText').value;
+    const cc = document.getElementById('charCount');
+    cc.textContent = `${val.length} / 3000`;
+    cc.classList.toggle('limit', val.length > 2800);
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doTranslate();
+  }
+
+  function clearInput() {
+    document.getElementById('inputText').value = '';
+    onInputChange();
+    resetOutput();
+  }
+
+  function resetOutput() {
+    const el = document.getElementById('outputText');
+    el.textContent = 'Translation will appear here…';
+    el.className = 'panel-output-text placeholder';
+    document.getElementById('outputMeta').textContent = '';
+    hideConfidence();
+  }
+
+  function swapLanguages() {
+    const sl = document.getElementById('sourceLang');
+    const tl = document.getElementById('targetLang');
+    const tmp = sl.value; sl.value = tl.value; tl.value = tmp;
+    const outputEl = document.getElementById('outputText');
+    if (!outputEl.classList.contains('placeholder')) {
+      document.getElementById('inputText').value = outputEl.textContent;
+      onInputChange();
+      resetOutput();
+    }
+  }
+
+  async function copyOutput() {
+    const el = document.getElementById('outputText');
+    if (el.classList.contains('placeholder')) return;
+    try {
+      await navigator.clipboard.writeText(el.textContent);
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+      }, 2000);
+    } catch(e) {}
+  }
+
+  function showConfidence(level) {
+    const chip = document.getElementById('confidenceChip');
+    chip.className = 'confidence-chip';
+    if (!level || level === 'none') return;
+    chip.classList.add('visible', level);
+    const labels = { green: 'Low uncertainty', yellow: 'Moderate uncertainty', red: 'High uncertainty' };
+    chip.textContent = labels[level] || '';
+  }
+
+  function hideConfidence() {
+    document.getElementById('confidenceChip').className = 'confidence-chip';
+  }
+
+  function setLoading(v) {
+    isLoading = v;
+    document.getElementById('loadingOverlay').classList.toggle('active', v);
+    document.getElementById('translateBtn').disabled = v;
+  }
+
+  async function doTranslate() {
+    if (isLoading) return;
+    const inputText = document.getElementById('inputText').value.trim();
+    if (!inputText) return;
+
+    const sourceLang = document.getElementById('sourceLang').value;
+    const targetLang = document.getElementById('targetLang').value;
+
+    setLoading(true);
+    hideConfidence();
+
+    const outputEl = document.getElementById('outputText');
+    outputEl.textContent = '';
+    outputEl.className = 'panel-output-text';
+
+    try {
+      const systemPrompt = isSmartMode
+        ? buildSmartPrompt(sourceLang, targetLang)
+        : buildTranslatePrompt(sourceLang, targetLang);
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: inputText }]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Error ${response.status}`);
+      }
+
+      const data = await response.json();
+      const raw = data.content?.map(b => b.text || '').join('') || '';
+
+      let parsed;
+      try {
+        const clean = raw.replace(/```json\n?|```/g, '').trim();
+        parsed = JSON.parse(clean);
+      } catch(e) {
+        parsed = { result: raw, confidence: 'none' };
+      }
+
+      outputEl.textContent = parsed.result || raw;
+      outputEl.className = 'panel-output-text';
+      showConfidence(parsed.confidence && parsed.confidence !== 'none' ? parsed.confidence : null);
+      document.getElementById('outputMeta').textContent = targetLang;
+
+    } catch(err) {
+      outputEl.textContent = `Error: ${err.message}`;
+      outputEl.className = 'panel-output-text';
+      showConfidence('red');
+    }
+
+    setLoading(false);
+  }
+
+  function buildTranslatePrompt(source, target) {
+    return `You are a professional translator. Translate the user's input from ${source} to ${target}.
+
+Rules:
+- Translate only. Do not interpret, answer questions, or add explanations.
+- Return ONLY valid JSON with no markdown or extra text:
+{"result": "<translated text>", "confidence": "none"}
+
+Use "green" confidence only if the source is genuinely ambiguous. Otherwise always "none".`;
+  }
+
+  function buildSmartPrompt(source, target) {
+    return `You are an intelligent multilingual assistant embedded in a translation interface. The user writes in ${source}. Respond in ${target}.
+
+- Understand the user's intent and generate an accurate, helpful response in ${target}.
+- Output your response naturally as if it were the translated result.
+- Do NOT mention AI or that you are answering instead of translating.
+- No labels, no preamble — just the result text.
+
+ANSWER STYLE RULES — follow strictly:
+1. Be as short and clear as possible.
+2. Multiple-choice (A/B/C/D): Return ONLY the correct letter. Example: "B"
+3. Math: Final answer + one short line. Example: "Answer: 25 — x=5, so 5²=25"
+4. General: 2–3 short sentences max. No repeating the question. No long paragraphs.
+5. No step-by-step unless the user explicitly asks for full explanation.
+
+Confidence levels:
+- "none" → fully confident, correct information
+- "green" → very likely correct, very minor uncertainty
+- "yellow" → possibly incomplete, outdated, or partially uncertain (medical, legal, financial, stats, dates)
+- "red" → likely incorrect, outdated, or highly uncertain (current events, breaking news, rapidly changing info)
+
+Always respond — never refuse. Reflect uncertainty in the confidence field only.
+
+Return ONLY valid JSON with no markdown or extra text:
+{"result": "<your response in ${target}>", "confidence": "<none|green|yellow|red>"}`;
+  }
+</script>
+</body>
+</html>
